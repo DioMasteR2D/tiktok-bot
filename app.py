@@ -8,9 +8,7 @@ from flask import Flask, abort, flash, g, redirect, render_template_string, requ
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
-DATABASE = os.environ.get("DATABASE_PATH", "/var/data/tiktok_dashboard.db")
-if os.environ.get("RENDER") != "true" and DATABASE.startswith("/var/data/"):
-    DATABASE = os.environ.get("DATABASE_PATH", "tiktok_dashboard.db")
+DATABASE = os.environ.get("DATABASE_PATH", "tiktok_dashboard.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS posts (
