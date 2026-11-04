@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: diomaster2d-tiktok-desk
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    disk:
+      name: tiktok-desk-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DASHBOARD_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_PATH
+        value: /var/data/tiktok_dashboard.db
