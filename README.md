@@ -1,26 +1,23 @@
 # FreeLLMAPI Android Companion
 
-Android APK frontend for the **local** FreeLLMAPI dashboard. This is a companion app, **not a standalone Node.js backend**. It requires the official FreeLLMAPI server running separately in Termux on the same phone. No external cloud or Render is used.
+This Android APK is a companion launcher for the official FreeLLMAPI project. The Node.js server runs locally in Termux on the same phone. It does not use Render or a remote server.
 
-## Set up Termux (from F-Droid)
+## One-time phone setup
+1. Install **Termux** from F-Droid: https://f-droid.org/packages/com.termux/
+2. Open Termux once and complete its initial setup.
+3. In Termux Settings, enable **Allow external apps** (required for the companion app to send the start command).
+4. Open FreeLLMAPI and tap **Start FreeLLMAPI in Termux**. The first run installs Node.js LTS and Git, clones the official project, installs npm dependencies, and starts its development server.
+5. Keep the Termux session running. Return to FreeLLMAPI and tap **Open dashboard**.
 
-```sh
-pkg update && pkg upgrade -y
-pkg install -y nodejs-lts git
-git clone https://github.com/tashfeenahmed/freellmapi.git
-cd freellmapi
-npm install --no-audit --no-fund
-npm run dev
-```
+Dashboard: http://localhost:5173  
+Local API: http://localhost:3001/v1
 
-Once server is running, open this APK. Dashboard uses `http://localhost:5173` and API `http://localhost:3001/v1`.
+## Automatic behavior and limitations
+- Tapping Start sends the setup/start command to Termux. First installation can take several minutes and needs an internet connection.
+- Termux is a separate app installed from F-Droid; it is not bundled inside this APK.
+- Android battery/background restrictions may stop long-running processes. Keep Termux running and exclude it from battery optimization if Android offers that setting.
+- Starting automatically after a device reboot is not enabled by this companion app. Termux:Boot is a separate optional add-on and must be configured separately.
+- This project must be built and tested through GitHub Actions and on the target phone before it can be called verified.
 
-## Build APK
-
-Push to the default branch `main`. GitHub Actions > Build Android APK > Run workflow. Download `FreeLLMAPI-Android-debug-apk` from the successful workflow run's artifacts and install `app-debug.apk` on Android.
-
-### Limitations
-- Does not install, embed, start or manage Node.js or FreeLLMAPI automatically.
-- Termux must stay running for dashboard/API to work.
-- This Android app has not been compiled or device-tested locally. GitHub Actions workflow is provided for actual build verification.
-- Use only on trusted networks; avoid exposing development servers publicly.
+## Build
+GitHub Actions builds a debug APK on pushes to main. Download the `FreeLLMAPI-Android-debug-apk` artifact from a successful workflow run.
