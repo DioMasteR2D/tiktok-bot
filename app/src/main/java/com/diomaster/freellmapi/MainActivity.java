@@ -108,7 +108,8 @@ public class MainActivity extends Activity {
       "if ! command -v node >/dev/null 2>&1 || ! command -v git >/dev/null 2>&1; then pkg update -y && pkg install -y nodejs-lts git; fi; " +
       "if [ ! -d \"$HOME/freellmapi/.git\" ]; then git clone https://github.com/tashfeenahmed/freellmapi.git \"$HOME/freellmapi\"; fi; " +
       "cd \"$HOME/freellmapi\"; " +
-      "if [ ! -x node_modules/.bin/concurrently ]; then npm install --no-audit --no-fund; fi; " +
+      "if [ ! -d node_modules ]; then npm install --no-audit --no-fund; fi; " +
+      "if [ ! -x node_modules/.bin/concurrently ]; then npm install --no-save --no-audit --no-fund concurrently; fi; " +
       "npm run dev";
     try {
       Intent intent = new Intent("com.termux.RUN_COMMAND");
