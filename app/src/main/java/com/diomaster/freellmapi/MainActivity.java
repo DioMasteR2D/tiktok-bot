@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.provider.Settings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
@@ -18,8 +19,10 @@ import android.view.Gravity;
 public class MainActivity extends Activity {
   private static final String DASHBOARD = "http://localhost:5173";
   private static final String TERMUX = "com.termux";
+  private static final int REQUEST_TERMUX_PERMISSION = 741;
   private WebView browser;
   private TextView info;
+  private Button startButton;
 
   @Override public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -37,16 +40,16 @@ public class MainActivity extends Activity {
 
     info = new TextView(this);
     info.setTextColor(Color.LTGRAY);
-    info.setText("Πάτησε «Εκκίνηση» για να εγκατασταθεί (την πρώτη φορά) και να ξεκινήσει το FreeLLMAPI στο Termux.");
+    info.setText("Πάτησε «Εκκίνηση» για να ξεκινήσει το FreeLLMAPI στο Termux.");
     info.setPadding(0, 12, 0, 12);
     root.addView(info);
 
-    Button start = new Button(this);
-    start.setText("Εκκίνηση FreeLLMAPI στο Termux");
-    root.addView(start);
+    startButton = new Button(this);
+    startButton.setText("ΕΚΚΙΝΗΣΗ FREELLMAPI ΣΤΟ TERMUX");
+    root.addView(startButton);
 
     Button open = new Button(this);
-    open.setText("Άνοιγμα dashboard");
+    open.setText("ΑΝΟΙΓΜΑ DASHBOARD");
     root.addView(open);
 
     browser = new WebView(this);
@@ -54,30 +57,52 @@ public class MainActivity extends Activity {
     browser.getSettings().setDomStorageEnabled(true);
     browser.setWebViewClient(new WebViewClient() {
       @Override public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
-        if (request.isForMainFrame()) info.setText("Ο server δεν απαντά ακόμη. Έλεγξε ότι το Termux εκτελεί το FreeLLMAPI και πάτησε «Άνοιγμα dashboard».");
+        if (request.isForMainFrame()) info.setText("Ο server δεν λειτουργεί ακόμη. Πάτησε Εκκίνηση και άφησε το Termux ανοιχτό.");
       }
       @Override public void onPageFinished(WebView view, String url) {
-        if (url.startsWith(DASHBOARD)) info.setText("Συνδεδεμένο στο τοπικό FreeLLMAPI.");
+        if (url.startsWith(DASHBOARD)) info.setText("Συνδέθηκε στο τοπικό FreeLLMAPI.");
       }
     });
     root.addView(browser, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
 
-    start.setOnClickListener(v -> startInTermux());
+    startButton.setOnClickListener(v -> startInTermux());
     open.setOnClickListener(v -> browser.loadUrl(DASHBOARD));
     setContentView(root);
     browser.loadUrl(DASHBOARD);
   }
 
   private void startInTermux() {
-    if (checkSelfPermission("com.termux.permission.RUN_COMMAND") != PackageManager.PERMISSION_GRANTED) {
-      info.setText("Χρειάζεται άδεια RUN_COMMAND. Άνοιξε τις πληροφορίες εφαρμογής FreeLLMAPI και επίτρεψε την άδεια, αν εμφανίζεται. Στο Termux ενεργοποίησε επίσης Allow external apps.");
-    }
     if (!isPackageInstalled(TERMUX)) {
       info.setText("Δεν βρέθηκε το Termux. Εγκατέστησέ το από το F-Droid και άνοιξέ το μία φορά.");
       try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/com.termux/"))); } catch (Exception ignored) {}
       return;
     }
 
+    if (checkSelfPermission("com.termux.permission.RUN_COMMAND") != PackageManager.PERMISSION_GRANTED) {
+      info.setText("Χρειάζεται να επιτρέψεις την άδεια «Run commands in Termux environment» στο επόμενο μήνυμα.");
+      requestPermissions(new String[]{"com.termux.permission.RUN_COMMAND"}, REQUEST_TERMUX_PERMISSION);
+      return;
+    }
+    launchTermuxCommand();
+  }
+
+  @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    if (requestCode == REQUEST_TERMUX_PERMISSION) {
+      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        info.setText("Η άδεια δόθηκε. Ξεκινά το FreeLLMAPI…");
+        launchTermuxCommand();
+      } else {
+        info.setText("Η άδεια δεν δόθηκε. Άνοιξε Ρυθμίσεις Android → Εφαρμογές → FreeLLMAPI → Δικαιώματα → Πρόσθετα δικαιώματα → Run commands in Termux environment και επίτρεψέ την.");
+        try {
+          Intent settings = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+          startActivity(settings);
+        } catch (Exception ignored) {}
+      }
+    }
+  }
+
+  private void launchTermuxCommand() {
     String script =
       "set -e; " +
       "if ! command -v node >/dev/null 2>&1 || ! command -v git >/dev/null 2>&1; then pkg update -y && pkg install -y nodejs-lts git; fi; " +
@@ -93,9 +118,9 @@ public class MainActivity extends Activity {
       intent.putExtra("com.termux.RUN_COMMAND_WORKDIR", "/data/data/com.termux/files/home");
       intent.putExtra("com.termux.RUN_COMMAND_BACKGROUND", false);
       startService(intent);
-      info.setText("Στάλθηκε εντολή στο Termux. Την πρώτη φορά θα κατεβάσει Node.js και FreeLLMAPI και θα εγκαταστήσει τα πακέτα. Άφησε το Termux να τρέχει.");
+      info.setText("Εστάλη η εκκίνηση στο Termux. Αν είναι η πρώτη φορά, περίμενε να εγκατασταθούν Node.js και FreeLLMAPI. Άφησε το Termux ανοιχτό.");
     } catch (Exception e) {
-      info.setText("Δεν ξεκίνησε το Termux. Έλεγξε την άδεια RUN_COMMAND και την επιλογή Allow external apps στο Termux. Λεπτομέρεια: " + e.getMessage());
+      info.setText("Δεν ξεκίνησε το Termux: " + e.getMessage());
     }
   }
 
